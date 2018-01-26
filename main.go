@@ -28,7 +28,11 @@ type ServiceInstances struct {
 }
 
 type Credentials struct {
-	Uri string `json:"uri"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Hostname string `json:"hostname"`
+	Port     int    `json:"port"`
+	Name     string `json:"name"`
 }
 
 type Row struct {
@@ -42,39 +46,20 @@ func main() {
 	portNumber, err := strconv.Atoi(port)
 	FreakOut(err)
 
-	// json.Unmarshal([]byte(os.Getenv("VCAP_SERVICES")), &vcapServices)
-
-	// postgresCredentials := vcapServices["postgres"].([]interface{})[0].(map[string]interface{})["credentials"].(map[string]interface{})
-	// jdbcUri := postgresCredentials["jdbc_uri"].(string)
-
 	connBytes := os.Getenv("VCAP_SERVICES")
-	// myServices := &vcapServices{
-	// 	pmysql: []serviceInstances{
-	// 		serviceInstances{
-	// 			credentials: credentials{},
-	// 		},
-	// 	},
-	// }
 
 	myServices := &VcapServices{}
 	err = json.Unmarshal([]byte(connBytes), myServices)
 	FreakOut(err)
+	creds := myServices.Pmysql[0].Credentials
 
-	server.db, err = sql.Open("mysql", myServices.Pmysql[0].Credentials.Uri)
+	connString := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", creds.Username, creds.Password, creds.Hostname, creds.Port, creds.Name)
+
+	server.db, err = sql.Open("mysql", connString)
 	FreakOut(err)
 	defer server.db.Close()
 	err = server.db.Ping()
 	FreakOut(err)
-
-	_, err = server.db.Exec("create database if not exists colors;", Row{})
-	FreakOut(err)
-
-	_, err = server.db.Exec("insert into colors (color, votes) values (blue, 0)  ")
-	FreakOut(err)
-	_, err = server.db.Exec("insert into colors (color, votes) values (yellow, 0)  ")
-	FreakOut(err)
-
-	fmt.Println("CONNECTION STRING: ", myServices.Pmysql[0].Credentials.Uri)
 
 	server.Start(portNumber)
 	defer server.Stop()
@@ -94,14 +79,39 @@ func (s *psifosServer) Start(port int) {
 	http.Serve(l, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		if strings.Contains(path, "/put/blue") {
-			_, err := s.db.Exec("update colors set votes = votes + 1 where color = blue")
+			_, err := s.db.Exec("update colors set votes = votes + 1 where color = ?", "blue")
 
 			if err != nil {
 				w.WriteHeader(500)
 			}
-			w.Write([]byte("blue"))
 		} else if strings.Contains(path, "/put/yellow") {
-			w.Write([]byte("yellow"))
+			_, err := s.db.Exec("update colors set votes = votes + 1 where color = ?", "yellow")
+
+			if err != nil {
+				w.WriteHeader(500)
+			}
+		} else if strings.Contains(path, "clear/database") {
+			_, err := s.db.Exec("truncate table colors")
+
+			if err != nil {
+				w.WriteHeader(500)
+			}
+		} else if strings.Contains(path, "create/database") {
+
+			_, err := s.db.Exec("CREATE TABLE colors ( color varchar(32), votes integer )")
+			if err != nil {
+				w.WriteHeader(500)
+			}
+
+			_, err = s.db.Exec("insert into colors (color, votes) values (?, ?)", "blue", 0)
+			if err != nil {
+				w.WriteHeader(500)
+			}
+
+			_, err = s.db.Exec("insert into colors (color, votes) values (?, ?)", "yellow", 0)
+			if err != nil {
+				w.WriteHeader(500)
+			}
 		}
 		w.Header().Set("Content-type", "application/json")
 		w.WriteHeader(200)

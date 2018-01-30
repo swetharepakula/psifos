@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 )
 
 type psifosServer struct {
@@ -36,8 +36,8 @@ type Credentials struct {
 }
 
 type Row struct {
-	Color string
-	Votes int
+	Animal string
+	Votes  int
 }
 
 func main() {
@@ -78,46 +78,56 @@ func (s *psifosServer) Start(port int) {
 
 	http.Serve(l, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
-		if strings.Contains(path, "/put/blue") {
-			_, err := s.db.Exec("update colors set votes = votes + 1 where color = ?", "blue")
+		var err error
 
-			if err != nil {
-				w.WriteHeader(500)
-			}
-		} else if strings.Contains(path, "/put/yellow") {
-			_, err := s.db.Exec("update colors set votes = votes + 1 where color = ?", "yellow")
+		if strings.Contains(path, "/put/cats") {
+			_, err = s.db.Exec("update pets set votes = votes + 1 where animal = ?", "cats")
 
-			if err != nil {
-				w.WriteHeader(500)
-			}
-		} else if strings.Contains(path, "clear/database") {
-			_, err := s.db.Exec("truncate table colors")
+		} else if strings.Contains(path, "/put/dogs") {
+			_, err = s.db.Exec("update pets set votes = votes + 1 where animal = ?", "dogs")
 
+		} else if strings.Contains(path, "setup/database") {
+			_, err = s.db.Exec("truncate table pets")
 			if err != nil {
-				w.WriteHeader(500)
-			}
-		} else if strings.Contains(path, "create/database") {
-
-			_, err := s.db.Exec("CREATE TABLE colors ( color varchar(32), votes integer )")
-			if err != nil {
-				w.WriteHeader(500)
+				driverErr, ok := err.(*mysql.MySQLError)
+				if !ok || driverErr.Number != 1146 {
+					// 1146 is error code for Table doesn't exist
+					RespondWithError(w, err)
+					return
+				}
 			}
 
-			_, err = s.db.Exec("insert into colors (color, votes) values (?, ?)", "blue", 0)
+			_, err = s.db.Exec("CREATE TABLE IF NOT EXISTS pets ( animal varchar(32), votes integer )")
 			if err != nil {
-				w.WriteHeader(500)
+				RespondWithError(w, err)
+				return
 			}
 
-			_, err = s.db.Exec("insert into colors (color, votes) values (?, ?)", "yellow", 0)
+			_, err = s.db.Exec("insert into pets (animal, votes) values (?, ?)", "cats", 0)
 			if err != nil {
-				w.WriteHeader(500)
+				RespondWithError(w, err)
+				return
+			}
+
+			_, err = s.db.Exec("insert into pets (animal, votes) values (?, ?)", "dogs", 0)
+			if err != nil {
+				RespondWithError(w, err)
+				return
 			}
 		}
-		w.Header().Set("Content-type", "application/json")
-		w.WriteHeader(200)
-		rows, err := s.getAllRows()
-		FreakOut(err)
-		w.Write([]byte(fmt.Sprintf("%v", rows)))
+
+		if err != nil {
+			RespondWithError(w, err)
+		} else {
+			rows, err := s.getAllRows()
+			if err != nil {
+				RespondWithError(w, err)
+				return
+			}
+			w.Header().Set("Content-type", "application/json")
+			w.WriteHeader(200)
+			w.Write([]byte(fmt.Sprintf("%v", rows)))
+		}
 	}))
 }
 
@@ -131,25 +141,30 @@ func FreakOut(err error) {
 	}
 }
 
+func RespondWithError(w http.ResponseWriter, err error) {
+	w.WriteHeader(500)
+	w.Write([]byte(err.Error()))
+}
+
 func (s *psifosServer) getAllRows() ([]Row, error) {
-	rows, err := s.db.Query("select * from colors")
+	rows, err := s.db.Query("select * from pets")
 	if err != nil {
 		return []Row{}, err
 	}
 
 	defer rows.Close()
 
-	colors := []Row{}
+	pets := []Row{}
 
 	for rows.Next() {
 
 		row := Row{}
-		err = rows.Scan(&row.Color, &row.Votes)
+		err = rows.Scan(&row.Animal, &row.Votes)
 		if err != nil {
 			return []Row{}, err
 		}
-		colors = append(colors, row)
+		pets = append(pets, row)
 	}
 
-	return colors, nil
+	return pets, nil
 }

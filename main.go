@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/icza/gowut/gwu"
+	"github.com/swetharepakula/psifos/button"
 	"github.com/swetharepakula/psifos/server"
 )
 
@@ -43,8 +44,8 @@ func main() {
 	btn1 := gwu.NewButton("Dogs")
 	btn2 := gwu.NewButton("Cats")
 
-	btn1.AddEHandler(server.NewButtonHandler(s, "categoryOne"), gwu.ETypeClick)
-	btn2.AddEHandler(server.NewButtonHandler(s, "categoryTwo"), gwu.ETypeClick)
+	btn1.AddEHandler(button.NewButtonHandler(s, "categoryOne"), gwu.ETypeClick)
+	btn2.AddEHandler(button.NewButtonHandler(s, "categoryTwo"), gwu.ETypeClick)
 
 	btnsPanel.Add(btn1)
 	btnsPanel.Add(btn2)
@@ -52,7 +53,7 @@ func main() {
 	win.Add(btnsPanel)
 
 	setupBtn := gwu.NewButton("Setup Database")
-	setupBtn.AddEHandler(server.NewButtonHandler(s, "setup"), gwu.ETypeClick)
+	setupBtn.AddEHandler(button.NewButtonHandler(s, "setup"), gwu.ETypeClick)
 	win.Add(setupBtn)
 
 	serv := gwu.NewServer("psifos", fmt.Sprintf("0.0.0.0:%d", portNumber))

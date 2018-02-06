@@ -1,15 +1,16 @@
-package server
+package button
 
 import (
 	"github.com/icza/gowut/gwu"
+	"github.com/swetharepakula/psifos/server"
 )
 
 type ButtonHandler struct {
-	s        *PsifosServer
+	s        *server.PsifosServer
 	category string
 }
 
-func NewButtonHandler(s *PsifosServer, category string) *ButtonHandler {
+func NewButtonHandler(s *server.PsifosServer, category string) *ButtonHandler {
 	return &ButtonHandler{
 		s:        s,
 		category: category,

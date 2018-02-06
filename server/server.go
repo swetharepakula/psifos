@@ -21,7 +21,7 @@ type PsifosServer struct {
 }
 
 type VcapServices struct {
-	Pmysql []ServiceInstances `json:"p-mysql"`
+	Pmysql []ServiceInstances `json:"cleardb"`
 }
 
 type ServiceInstances struct {
@@ -32,7 +32,7 @@ type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Hostname string `json:"hostname"`
-	Port     int    `json:"port"`
+	Port     string `json:"port"`
 	Name     string `json:"name"`
 }
 

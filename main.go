@@ -21,7 +21,8 @@ func main() {
 
 	connBytes := os.Getenv("VCAP_SERVICES")
 
-	myServices := &server.ClearDBVcapServices{}
+	var myServices interface{}
+	myServices = &server.ClearDBVcapServices{}
 	err = json.Unmarshal([]byte(connBytes), myServices)
 	server.FreakOut(err)
 	if len(myServices.ServiceInstances) < 1 {

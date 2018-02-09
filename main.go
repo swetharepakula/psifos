@@ -2,8 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -19,36 +17,7 @@ func main() {
 	portNumber, err := strconv.Atoi(port)
 	server.FreakOut(err)
 
-	connBytes := os.Getenv("VCAP_SERVICES")
-
-	var myServices interface{}
-	var creds server.Credentials
-	myServices = &server.ClearDBVcapServices{}
-	err = json.Unmarshal([]byte(connBytes), myServices)
-	server.FreakOut(err)
-	if len(myServices.(*server.ClearDBVcapServices).ServiceInstances) > 0 {
-		creds = myServices.(*server.ClearDBVcapServices).ServiceInstances[0].Credentials
-	} else {
-		myServices = &server.PmysqlVcapServices{}
-		err = json.Unmarshal([]byte(connBytes), myServices)
-		server.FreakOut(err)
-		if len(myServices.(*server.PmysqlVcapServices).ServiceInstances) > 0 {
-			creds = myServices.(*server.PmysqlVcapServices).ServiceInstances[0].Credentials
-		} else {
-			myServices = &server.UserProvidedVcapServices{}
-			err = json.Unmarshal([]byte(connBytes), myServices)
-			server.FreakOut(err)
-			if len(myServices.(*server.UserProvidedVcapServices).ServiceInstances) > 0 {
-				creds = myServices.(*server.UserProvidedVcapServices).ServiceInstances[0].Credentials
-			} else {
-				panic(errors.New("Cannot connect to a suitable database"))
-			}
-		}
-	}
-
-	connString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", creds.Username, creds.Password, creds.Hostname, creds.Port, creds.Name)
-
-	s.Db, err = sql.Open("mysql", connString)
+	s.Db, err = sql.Open("mysql", server.GetVcapServicesCreds())
 	server.FreakOut(err)
 	defer s.Db.Close()
 	err = s.Db.Ping()
@@ -59,51 +28,21 @@ func main() {
 	win.SetHAlign(gwu.HACenter)
 	win.SetCellPadding(2)
 
-	win.Add(gwu.NewLabel("Vote Below by Clicking on Your Favorite"))
-	btnsPanel := gwu.NewNaturalPanel()
-	btn1 := gwu.NewButton("Dogs")
-	btn2 := gwu.NewButton("Cats")
+	label := gwu.NewLabel("Vote Below By Clicking on Your Favorite")
+	label.Style().SetFontSize("50pt")
+	win.Add(label)
 
-	btn1.AddEHandler(button.NewButtonHandler(s, "categoryOne"), gwu.ETypeClick)
-	btn2.AddEHandler(button.NewButtonHandler(s, "categoryTwo"), gwu.ETypeClick)
+	btn1 := button.CreateButton("Dogs", "categoryOne", s)
+	btn2 := button.CreateButton("Cats", "categoryTwo", s)
+	setupBtn := button.CreateButton("Setup Database", "setup", s)
 
-	btnsPanel.Add(btn1)
-	btnsPanel.Add(btn2)
+	win.Add(btn1)
+	win.Add(btn2)
 
-	win.Add(btnsPanel)
-
-	setupBtn := gwu.NewButton("Setup Database")
-	setupBtn.AddEHandler(button.NewButtonHandler(s, "setup"), gwu.ETypeClick)
 	win.Add(setupBtn)
 
-	serv := gwu.NewServer("psifos", fmt.Sprintf("0.0.0.0:%d", portNumber))
+	serv := gwu.NewServer("", fmt.Sprintf("0.0.0.0:%d", portNumber))
 	serv.AddWin(win)
 	serv.SetText("Psifos")
 	serv.Start()
 }
-
-// func main() {
-// 	s := server.NewPsifosServer()
-// 	port := os.Getenv("PORT")
-// 	portNumber, err := strconv.Atoi(port)
-// 	server.FreakOut(err)
-
-// 	connBytes := os.Getenv("VCAP_SERVICES")
-
-// 	myServices := &server.VcapServices{}
-// 	server.FreakOut(err)
-// 	err = json.Unmarshal([]byte(connBytes), myServices)
-// 	server.FreakOut(err)
-// 	creds := myServices.Pmysql[0].Credentials
-
-// 	connString := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", creds.Username, creds.Password, creds.Hostname, creds.Port, creds.Name)
-
-// 	s.Db, err = sql.Open("mysql", connString)
-// 	server.FreakOut(err)
-// 	defer s.Db.Close()
-// 	err = s.Db.Ping()
-// 	server.FreakOut(err)
-
-// 	s.Start(portNumber)
-// 	defer s.Stop()
-// }

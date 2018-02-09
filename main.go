@@ -22,23 +22,29 @@ func main() {
 	connBytes := os.Getenv("VCAP_SERVICES")
 
 	var myServices interface{}
+	var creds server.Credentials
 	myServices = &server.ClearDBVcapServices{}
 	err = json.Unmarshal([]byte(connBytes), myServices)
 	server.FreakOut(err)
-	if len(myServices.ServiceInstances) < 1 {
+	if len(myServices.(*server.ClearDBVcapServices).ServiceInstances) > 0 {
+		creds = myServices.(*server.ClearDBVcapServices).ServiceInstances[0].Credentials
+	} else {
 		myServices = &server.PmysqlVcapServices{}
 		err = json.Unmarshal([]byte(connBytes), myServices)
 		server.FreakOut(err)
+		if len(myServices.(*server.PmysqlVcapServices).ServiceInstances) > 0 {
+			creds = myServices.(*server.PmysqlVcapServices).ServiceInstances[0].Credentials
+		} else {
+			myServices = &server.UserProvidedVcapServices{}
+			err = json.Unmarshal([]byte(connBytes), myServices)
+			server.FreakOut(err)
+			if len(myServices.(*server.UserProvidedVcapServices).ServiceInstances) > 0 {
+				creds = myServices.(*server.UserProvidedVcapServices).ServiceInstances[0].Credentials
+			} else {
+				panic(errors.New("Cannot connect to a suitable database"))
+			}
+		}
 	}
-	if len(myServices.ServiceInstances) < 1 {
-		myServices = &server.UserProvidVcapServices{}
-		err = json.Unmarshal([]byte(connBytes), myServices)
-		server.FreakOut(err)
-	}
-	if len(myServices.ServiceInstances) < 1 {
-		panic(errors.New("Cannot connect to a suitable database"))
-	}
-	creds := myServices.ServiceInstances[0].Credentials
 
 	connString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", creds.Username, creds.Password, creds.Hostname, creds.Port, creds.Name)
 

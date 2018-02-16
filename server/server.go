@@ -27,7 +27,7 @@ type PsifosServer struct {
 type VcapServices struct {
 	ClearDBVcapServices      []ServiceInstances       `json:"cleardb"`
 	PmysqlVcapServices       []PMysqlServiceInstances `json:"p-mysql"`
-	UserProvidedVcapServices []PMysqlServiceInstances `json:"user-provided"`
+	UserProvidedVcapServices []ServiceInstances       `json:"user-provided"`
 }
 
 type ServiceInstances struct {
@@ -66,15 +66,7 @@ func (s *VcapServices) GetCreds() (Credentials, error) {
 	}
 
 	if len(s.UserProvidedVcapServices) > 0 {
-		ups := s.UserProvidedVcapServices[0].Credentials
-
-		return Credentials{
-			Username: ups.Username,
-			Password: ups.Password,
-			Hostname: ups.Hostname,
-			Name:     ups.Name,
-			Port:     strconv.Itoa(ups.Port),
-		}, nil
+		return s.UserProvidedVcapServices[0].Credentials, nil
 	}
 
 	if len(s.PmysqlVcapServices) > 0 {

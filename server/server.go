@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
@@ -25,12 +24,15 @@ type PsifosServer struct {
 }
 
 type VcapServices struct {
-	ClearDBVcapServices      []ServiceInstances       `json:"cleardb"`
-	PmysqlVcapServices       []PMysqlServiceInstances `json:"p-mysql"`
-	UserProvidedVcapServices []ServiceInstances       `json:"user-provided"`
+	ClearDBVcapServices      []ServiceInstances             `json:"clearDB"`
+	UserProvidedVcapServices []UserProvidedServiceInstances `json:"user-provided"`
 }
 
 type ServiceInstances struct {
+	Credentials Credentials `json:"credentials"`
+}
+
+type UserProvidedServiceInstances struct {
 	Credentials Credentials `json:"credentials"`
 }
 
@@ -42,49 +44,24 @@ type Credentials struct {
 	Port     string `json:"port"`
 }
 
-type PMysqlServiceInstances struct {
-	Credentials MysqlCredentials `json:"credentials"`
-}
-
-type MysqlCredentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Hostname string `json:"hostname"`
-	Name     string `json:"name"`
-	Port     int    `json:"port"`
-}
-
 type Row struct {
 	Animal string
 	Votes  int
 }
 
-func (s *VcapServices) GetCreds() (Credentials, error) {
+func (s *VcapServices) GetCreds() (string, error) {
 
 	if len(s.ClearDBVcapServices) > 0 {
-		return s.ClearDBVcapServices[0].Credentials, nil
+		creds := s.ClearDBVcapServices[0].Credentials
+		return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", creds.Username, creds.Password, creds.Hostname, creds.Port, creds.Name), nil
 	}
 
 	if len(s.UserProvidedVcapServices) > 0 {
-		return s.UserProvidedVcapServices[0].Credentials, nil
+		creds := s.UserProvidedVcapServices[0].Credentials
+		return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", creds.Username, creds.Password, creds.Hostname, creds.Port, creds.Name), nil
 	}
 
-	if len(s.PmysqlVcapServices) > 0 {
-		mysql := s.PmysqlVcapServices[0].Credentials
-
-		return Credentials{
-			Username: mysql.Username,
-			Password: mysql.Password,
-			Hostname: mysql.Hostname,
-			Name:     mysql.Name,
-			Port:     strconv.Itoa(mysql.Port),
-		}, nil
-	}
-	return Credentials{}, errors.New("No Suitable Database")
-}
-
-func (creds *Credentials) ConnectionString() string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", creds.Username, creds.Password, creds.Hostname, creds.Port, creds.Name)
+	return "", errors.New("No Suitable Database")
 }
 
 func GetVcapServicesCreds() string {
@@ -95,10 +72,10 @@ func GetVcapServicesCreds() string {
 	err := json.Unmarshal([]byte(connBytes), myServices)
 	FreakOut(err)
 
-	creds, err := myServices.GetCreds()
+	connString, err := myServices.GetCreds()
 	FreakOut(err)
 
-	return creds.ConnectionString()
+	return connString
 }
 
 func (s *PsifosServer) Start(port int) {
@@ -150,12 +127,12 @@ func FreakOut(err error) {
 }
 
 func (s *PsifosServer) PutCategoryOne() error {
-	_, err := s.Db.Exec("update pets set votes = votes + 1 where animal = ?", "dogs")
+	_, err := s.Db.Exec("update animals set votes = votes + 1 where animal = ?", "dogs")
 	return err
 }
 
 func (s *PsifosServer) PutCategoryTwo() error {
-	_, err := s.Db.Exec("update pets set votes = votes + 1 where animal = ?", "cats")
+	_, err := s.Db.Exec("update animals set votes = votes + 1 where animal = ?", "cats")
 	return err
 }
 

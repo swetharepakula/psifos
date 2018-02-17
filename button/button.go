@@ -1,6 +1,8 @@
 package button
 
 import (
+	"fmt"
+
 	"github.com/icza/gowut/gwu"
 	"github.com/swetharepakula/psifos/server"
 )
@@ -19,13 +21,18 @@ func NewButtonHandler(s *server.PsifosServer, category string) *ButtonHandler {
 
 func (h *ButtonHandler) HandleEvent(e gwu.Event) {
 
+	var err error
 	switch h.category {
 	case "categoryOne":
-		h.s.PutCategoryOne()
+		err = h.s.PutCategoryOne()
 	case "categoryTwo":
-		h.s.PutCategoryTwo()
+		err = h.s.PutCategoryTwo()
 	case "setup":
-		h.s.SetupDatabase()
+		err = h.s.SetupDatabase()
+	}
+
+	if err != nil {
+		fmt.Println("Received error: ", err)
 	}
 }
 

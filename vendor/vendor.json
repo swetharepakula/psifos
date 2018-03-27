@@ -3,10 +3,6 @@
 	"ignore": "test",
 	"package": [
 		{
-			"path": "appengine/cloudsql",
-			"revision": ""
-		},
-		{
 			"checksumSHA1": "ZbU8qGzETzJZ2t30LmHxla5PLMY=",
 			"path": "github.com/go-sql-driver/mysql",
 			"revision": "bc14601d1bd56421dd60f561e6052c9ed77f9daf",
@@ -17,12 +13,6 @@
 			"path": "github.com/icza/gowut/gwu",
 			"revision": "7dde321edeeb14de3c4f665436fc5a698863cf48",
 			"revisionTime": "2017-09-26T09:29:22Z"
-		},
-		{
-			"checksumSHA1": "LiyXfqOzaeQ8vgYZH3t2hUEdVTw=",
-			"path": "google.golang.org/appengine/cloudsql",
-			"revision": "5bee14b453b4c71be47ec1781b0fa61c2ea182db",
-			"revisionTime": "2017-12-12T22:30:47Z"
 		}
 	],
 	"rootPath": "github.com/swetharepakula/psifos"

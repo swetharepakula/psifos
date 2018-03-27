@@ -13,9 +13,16 @@ import (
 
 func main() {
 	s := server.NewPsifosServer()
+
+	var portNumber int
+	var err error
 	port := os.Getenv("PORT")
-	portNumber, err := strconv.Atoi(port)
-	server.FreakOut(err)
+	if port != "" {
+		portNumber, err = strconv.Atoi(port)
+		server.FreakOut(err)
+	} else {
+		portNumber = 8080
+	}
 
 	s.Db, err = sql.Open("mysql", server.GetVcapServicesCreds())
 	server.FreakOut(err)
